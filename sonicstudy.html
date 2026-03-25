@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SonicStudy — Audio Flashcards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root {
+    --bg0: #080A10;
+    --bg1: #0E1018;
+    --bg2: #161926;
+    --bg3: #1E2235;
+    --border: rgba(255,255,255,0.07);
+    --border-hi: rgba(255,255,255,0.14);
+    --amber: #E8A930;
+    --amber-dim: rgba(232,169,48,0.12);
+    --amber-glow: rgba(232,169,48,0.25);
+    --teal: #00C9A7;
+    --teal-dim: rgba(0,201,167,0.1);
+    --text1: #E8E9F0;
+    --text2: #9DA3B8;
+    --text3: #5A6080;
+    --danger: #FF6B6B;
+    --success: #4ADE80;
+    --radius: 12px;
+    --radius-lg: 18px;
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-ui: 'Outfit', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-ui);
+    background: var(--bg0);
+    color: var(--text1);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #root { min-height: 100vh; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 4px; }
+
+  /* ─── AUTH SCREEN ─── */
+  .auth-screen {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .auth-hero {
+    background: linear-gradient(135deg, #0E1018 0%, #0E1322 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .auth-hero::before {
+    content: '';
+    position: absolute;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(232,169,48,0.08) 0%, transparent 70%);
+    top: 20%; left: 40%;
+    pointer-events: none;
+  }
+  .auth-hero::after {
+    content: '';
+    position: absolute;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,201,167,0.05) 0%, transparent 70%);
+    bottom: 20%; left: 10%;
+    pointer-events: none;
+  }
+  .auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 3rem; }
+  .auth-logo-icon {
+    width: 38px; height: 38px;
+    background: var(--amber);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .auth-logo-icon svg { width: 20px; height: 20px; fill: #080A10; }
+  .auth-logo-text { font-family: var(--font-ui); font-weight: 700; font-size: 1.25rem; letter-spacing: -0.02em; }
+  .auth-tagline {
+    font-family: var(--font-display);
+    font-size: 3.2rem;
+    font-weight: 500;
+    line-height: 1.15;
+    margin-bottom: 1.5rem;
+    color: var(--text1);
+  }
+  .auth-tagline em { font-style: italic; color: var(--amber); }
+  .auth-sub {
+    font-size: 1rem;
+    color: var(--text2);
+    line-height: 1.7;
+    max-width: 360px;
+  }
+  .auth-wave-viz {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    margin-top: 3rem;
+    height: 48px;
+  }
+  .auth-wave-viz span {
+    width: 4px;
+    background: var(--amber);
+    border-radius: 4px;
+    opacity: 0.6;
+    animation: waveIdle 1.6s ease-in-out infinite;
+  }
+  @keyframes waveIdle {
+    0%, 100% { transform: scaleY(1); opacity: 0.4; }
+    50% { transform: scaleY(var(--h)); opacity: 0.8; }
+  }
+
+  .auth-panel {
+    background: var(--bg1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 3rem;
+  }
+  .auth-form-wrap { width: 100%; max-width: 360px; }
+  .auth-title { font-size: 1.6rem; font-weight: 600; margin-bottom: 0.4rem; }
+  .auth-subtitle { font-size: 0.9rem; color: var(--text2); margin-bottom: 2rem; }
+  .auth-tabs { display: flex; gap: 0; margin-bottom: 2rem; border-bottom: 1px solid var(--border); }
+  .auth-tab {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    font-family: var(--font-ui);
+    font-weight: 500;
+    color: var(--text3);
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .auth-tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+
+  .field { margin-bottom: 1.1rem; }
+  .field label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--text2); margin-bottom: 0.4rem; letter-spacing: 0.04em; text-transform: uppercase; }
+  .field input {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    font-family: var(--font-ui);
+    color: var(--text1);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .field input:focus { border-color: var(--amber); }
+  .field input::placeholder { color: var(--text3); }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--amber);
+    color: #080A10;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 0.95rem;
+    border: none;
+    border-radius: 8px;
+    padding: 0.8rem;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    margin-top: 0.5rem;
+  }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .auth-error {
+    background: rgba(255,107,107,0.1);
+    border: 1px solid rgba(255,107,107,0.3);
+    color: var(--danger);
+    font-size: 0.85rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+
+  /* ─── APP SHELL ─── */
+  .app-shell { display: flex; flex-direction: column; min-height: 100vh; }
+
+  .topbar {
+    height: 60px;
+    background: var(--bg1);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 2rem;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text1); }
+  .topbar-logo-icon {
+    width: 30px; height: 30px;
+    background: var(--amber);
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .topbar-logo-icon svg { width: 16px; height: 16px; fill: #080A10; }
+  .topbar-brand { font-weight: 700; font-size: 1.05rem; }
+  .topbar-spacer { flex: 1; }
+  .topbar-user { font-size: 0.85rem; color: var(--text2); }
+  .topbar-btn {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .topbar-btn:hover { background: var(--bg3); color: var(--text1); }
+  .topbar-btn.settings { color: var(--amber); border-color: rgba(232,169,48,0.3); background: var(--amber-dim); }
+  .topbar-back {
+    background: none;
+    border: none;
+    color: var(--text2);
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    padding: 0.3rem 0;
+    transition: color 0.2s;
+  }
+  .topbar-back:hover { color: var(--text1); }
+
+  /* ─── LIBRARY SCREEN ─── */
+  .library { padding: 2.5rem; max-width: 1100px; margin: 0 auto; }
+  .library-header { margin-bottom: 2rem; }
+  .library-header h1 { font-family: var(--font-display); font-size: 2.4rem; font-weight: 500; }
+  .library-header p { color: var(--text2); margin-top: 0.3rem; }
+
+  .upload-zone {
+    border: 2px dashed var(--border-hi);
+    border-radius: var(--radius-lg);
+    padding: 3rem 2rem;
+    text-align: center;
+    background: var(--bg1);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 2.5rem;
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--amber); background: var(--amber-dim); }
+  .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-icon {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    background: var(--bg2);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1rem;
+    border: 1px solid var(--border-hi);
+  }
+  .upload-icon svg { width: 24px; height: 24px; stroke: var(--amber); fill: none; }
+  .upload-zone h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.3rem; }
+  .upload-zone p { font-size: 0.85rem; color: var(--text2); }
+  .upload-zone .badge {
+    display: inline-block;
+    background: var(--teal-dim);
+    color: var(--teal);
+    border: 1px solid rgba(0,201,167,0.2);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    padding: 0.25rem 0.6rem;
+    border-radius: 20px;
+    margin-top: 0.8rem;
+    text-transform: uppercase;
+  }
+
+  .section-title { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 1rem; }
+  .decks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+  .deck-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.4rem;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, transform 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .deck-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--amber), var(--teal));
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .deck-card:hover { border-color: var(--border-hi); background: var(--bg3); transform: translateY(-2px); }
+  .deck-card:hover::before { opacity: 1; }
+  .deck-card-title { font-weight: 600; font-size: 1rem; margin-bottom: 0.3rem; }
+  .deck-card-meta { font-size: 0.8rem; color: var(--text2); display: flex; gap: 1rem; }
+  .deck-card-meta span { display: flex; align-items: center; gap: 4px; }
+  .deck-card-footer {
+    margin-top: 1.2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .deck-card-date { font-size: 0.75rem; color: var(--text3); }
+  .deck-pill {
+    font-size: 0.72rem; font-weight: 600;
+    background: var(--amber-dim);
+    color: var(--amber);
+    border: 1px solid rgba(232,169,48,0.2);
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text3);
+  }
+  .empty-state h3 { font-size: 1rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text2); }
+  .empty-state p { font-size: 0.85rem; }
+
+  /* ─── DECK/CARDS SCREEN ─── */
+  .deck-screen { padding: 2.5rem; max-width: 860px; margin: 0 auto; }
+  .deck-screen-header { margin-bottom: 0.5rem; }
+  .deck-screen-title { font-family: var(--font-display); font-size: 2rem; font-weight: 500; }
+  .deck-stats { display: flex; gap: 1.5rem; margin: 1rem 0 2rem; }
+  .stat-pill {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.8rem; color: var(--text2);
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 0.35rem 0.8rem;
+    border-radius: 20px;
+  }
+  .stat-pill strong { color: var(--text1); }
+
+  /* Progress bar */
+  .progress-bar-wrap { margin-bottom: 2rem; }
+  .progress-bar-label { font-size: 0.75rem; color: var(--text2); margin-bottom: 0.4rem; display: flex; justify-content: space-between; }
+  .progress-bar { height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--amber), var(--teal)); border-radius: 2px; transition: width 0.5s ease; }
+
+  /* Search */
+  .search-wrap { position: relative; margin-bottom: 1.5rem; }
+  .search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--text3); fill: none; pointer-events: none; }
+  .search-input {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.65rem 1rem 0.65rem 2.5rem;
+    font-size: 0.9rem;
+    font-family: var(--font-ui);
+    color: var(--text1);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: var(--amber); }
+  .search-input::placeholder { color: var(--text3); }
+
+  /* Flashcard */
+  .card-list { display: flex; flex-direction: column; gap: 1rem; }
+  .flash-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .flash-card.playing { border-color: rgba(232,169,48,0.4); background: var(--bg3); }
+  .flash-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.2rem 1.4rem;
+  }
+  .card-num {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text3);
+    min-width: 28px;
+    padding-top: 3px;
+  }
+  .card-content { flex: 1; }
+  .card-term {
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--amber);
+    margin-bottom: 0.4rem;
+  }
+  .card-def { font-size: 0.9rem; color: var(--text2); line-height: 1.6; }
+  .card-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+
+  .play-btn {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    background: var(--bg3);
+    border: 1px solid var(--border-hi);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, transform 0.1s;
+    flex-shrink: 0;
+  }
+  .play-btn:hover { background: var(--amber-dim); border-color: rgba(232,169,48,0.4); }
+  .play-btn:active { transform: scale(0.92); }
+  .play-btn.active { background: var(--amber); border-color: var(--amber); }
+  .play-btn svg { width: 16px; height: 16px; fill: var(--text2); transition: fill 0.2s; }
+  .play-btn.active svg { fill: #080A10; }
+  .play-btn:hover svg { fill: var(--amber); }
+  .play-btn.active:hover svg { fill: #080A10; }
+
+  .play-status {
+    padding: 0.7rem 1.4rem 0.7rem 3.5rem;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 1rem;
+    font-size: 0.8rem;
+    background: rgba(232,169,48,0.04);
+  }
+  .play-status-label { color: var(--amber); font-weight: 500; }
+  .play-status-voice { color: var(--text3); }
+  .waveform-viz {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 20px;
+    margin-left: auto;
+  }
+  .waveform-viz span {
+    width: 3px;
+    border-radius: 2px;
+    background: var(--amber);
+    animation: wavePulse 0.8s ease-in-out infinite;
+  }
+  .waveform-viz span:nth-child(1) { animation-delay: 0s; }
+  .waveform-viz span:nth-child(2) { animation-delay: 0.1s; }
+  .waveform-viz span:nth-child(3) { animation-delay: 0.2s; }
+  .waveform-viz span:nth-child(4) { animation-delay: 0.1s; }
+  .waveform-viz span:nth-child(5) { animation-delay: 0s; }
+  @keyframes wavePulse {
+    0%, 100% { height: 4px; opacity: 0.4; }
+    50% { height: 18px; opacity: 1; }
+  }
+
+  /* ─── PROCESSING MODAL ─── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8,10,16,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    backdrop-filter: blur(4px);
+  }
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border-hi);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    min-width: 340px;
+    max-width: 480px;
+    width: 90%;
+  }
+  .modal h2 { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .modal p { font-size: 0.875rem; color: var(--text2); line-height: 1.6; margin-bottom: 1.2rem; }
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--text3);
+    font-size: 1.4rem;
+    cursor: pointer;
+    float: right;
+    line-height: 1;
+    transition: color 0.2s;
+  }
+  .modal-close:hover { color: var(--text1); }
+
+  /* Settings specific */
+  .settings-section { margin-bottom: 1.5rem; }
+  .settings-section h3 { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 0.8rem; }
+  .settings-input-wrap { position: relative; }
+  .settings-input-wrap input {
+    width: 100%;
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.7rem 1rem;
+    font-size: 0.85rem;
+    font-family: var(--font-mono);
+    color: var(--text1);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .settings-input-wrap input:focus { border-color: var(--amber); }
+  .settings-input-wrap input::placeholder { color: var(--text3); font-family: var(--font-ui); }
+  .settings-note { font-size: 0.75rem; color: var(--text3); margin-top: 0.4rem; }
+  .settings-note a { color: var(--amber); text-decoration: none; }
+  .btn-save {
+    background: var(--amber);
+    color: #080A10;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: none;
+    border-radius: 8px;
+    padding: 0.7rem 1.5rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .btn-save:hover { opacity: 0.9; }
+
+  /* Processing */
+  .processing-anim {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin: 1.5rem 0;
+  }
+  .processing-anim span {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--amber);
+    animation: bounce 0.8s ease-in-out infinite;
+  }
+  .processing-anim span:nth-child(2) { animation-delay: 0.15s; }
+  .processing-anim span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
+    40% { transform: scale(1.2); opacity: 1; }
+  }
+  .processing-step { font-size: 0.8rem; color: var(--amber); text-align: center; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: var(--bg3);
+    border: 1px solid var(--border-hi);
+    border-radius: 10px;
+    padding: 0.75rem 1.2rem;
+    font-size: 0.85rem;
+    z-index: 300;
+    animation: slideIn 0.3s ease;
+  }
+  .toast.success { border-color: rgba(74,222,128,0.3); color: var(--success); }
+  .toast.error { border-color: rgba(255,107,107,0.3); color: var(--danger); }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Responsive */
+  @media (max-width: 720px) {
+    .auth-screen { grid-template-columns: 1fr; }
+    .auth-hero { display: none; }
+    .library, .deck-screen { padding: 1.5rem; }
+    .topbar { padding: 0 1rem; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+async function hashPassword(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function getUsers() { return JSON.parse(localStorage.getItem('ss_users') || '[]'); }
+function setUsers(u) { localStorage.setItem('ss_users', JSON.stringify(u)); }
+function getSession() { return localStorage.getItem('ss_session'); }
+function setSession(id) { localStorage.setItem('ss_session', id || ''); }
+function getMurfKey() { return localStorage.getItem('ss_murf_key') || ''; }
+function setMurfKey(k) { localStorage.setItem('ss_murf_key', k); }
+function getClaudeKey() { return localStorage.getItem('ss_claude_key') || ''; }
+function setClaudeKey(k) { localStorage.setItem('ss_claude_key', k); }
+
+// ─────────────────────────────────────────────
+// PDF PARSING
+// ─────────────────────────────────────────────
+async function extractTextFromPDF(file) {
+  const pdfjsLib = window['pdfjs-dist/build/pdf'];
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const ab = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+  let text = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(item => item.str).join(' ') + '\n';
+  }
+  return text;
+}
+
+// ─────────────────────────────────────────────
+// NLP EXTRACTION — Claude API or Heuristic
+// ─────────────────────────────────────────────
+async function extractCardsWithClaude(text, claudeKey) {
+  const truncated = text.slice(0, 8000);
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': claudeKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: `Extract all key terms and their definitions from the following text. Return ONLY a JSON array of objects with "term" and "definition" keys. Extract 5-20 pairs. If no clear definitions exist, create concise definitions based on context.\n\nText:\n${truncated}\n\nReturn only the JSON array, no other text.`
+      }]
+    })
+  });
+  const data = await res.json();
+  const raw = data.content?.[0]?.text || '[]';
+  const clean = raw.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean);
+}
+
+function extractCardsHeuristic(text) {
+  const pairs = [];
+  const lines = text.split(/\n|\. /).map(l => l.trim()).filter(l => l.length > 10);
+
+  // Pattern 1: "Term: Definition" or "Term — Definition"
+  const patternColon = /^([A-Z][^:—\n]{2,40})[:—]\s+(.{15,300})$/;
+  // Pattern 2: "Term is/are/refers to ..."
+  const patternIs = /^([A-Z][^\n]{2,35})\s+(?:is|are|refers to|means|defined as)\s+(.{15,300})$/i;
+
+  for (const line of lines) {
+    let m = line.match(patternColon);
+    if (m && m[1].split(' ').length <= 6) {
+      pairs.push({ term: m[1].trim(), definition: m[2].trim() });
+      continue;
+    }
+    m = line.match(patternIs);
+    if (m && m[1].split(' ').length <= 6) {
+      pairs.push({ term: m[1].trim(), definition: m[0].trim() });
+    }
+  }
+
+  // Deduplicate and limit
+  const seen = new Set();
+  return pairs.filter(p => {
+    const k = p.term.toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  }).slice(0, 25);
+}
+
+async function extractCards(text, claudeKey) {
+  if (claudeKey) {
+    try { return await extractCardsWithClaude(text, claudeKey); } catch {}
+  }
+  // Fallback: heuristic
+  const pairs = extractCardsHeuristic(text);
+  if (pairs.length > 0) return pairs;
+  // Minimal fallback: chunk text into term/def pairs
+  const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 20 && s.length < 200);
+  const fallback = [];
+  for (let i = 0; i < Math.min(sentences.length, 20); i++) {
+    const words = sentences[i].split(' ');
+    fallback.push({
+      term: words.slice(0, 3).join(' '),
+      definition: sentences[i]
+    });
+  }
+  return fallback;
+}
+
+// ─────────────────────────────────────────────
+// MURF AI TTS
+// ─────────────────────────────────────────────
+async function generateMurfAudio(text, voiceId, murfKey) {
+  const res = await fetch('https://api.murf.ai/v1/speech/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': murfKey,
+    },
+    body: JSON.stringify({
+      voiceId,
+      style: 'Conversational',
+      text,
+      rate: 0,
+      pitch: 0,
+      sampleRate: 48000,
+      format: 'MP3',
+      channelType: 'STEREO',
+      encodeAsBase64: false,
+    })
+  });
+  if (!res.ok) throw new Error(`Murf error ${res.status}`);
+  const data = await res.json();
+  return data.audioFile;
+}
+
+// Web Speech API fallback
+function speakText(text, lang = 'en-US', rate = 0.95, pitch = 1) {
+  return new Promise(resolve => {
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = lang;
+    utt.rate = rate;
+    utt.pitch = pitch;
+    utt.onend = resolve;
+    speechSynthesis.speak(utt);
+  });
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ─────────────────────────────────────────────
+// AUDIO PLAYER LOGIC
+// ─────────────────────────────────────────────
+async function playCard(card, murfKey, termVoice, defVoice, onPhase) {
+  const murfAvail = !!murfKey;
+
+  if (murfAvail) {
+    try {
+      // Generate audio if not cached
+      const termUrl = card.termAudioUrl || await generateMurfAudio(card.term, termVoice, murfKey);
+      const defUrl = card.defAudioUrl || await generateMurfAudio(card.definition, defVoice, murfKey);
+      card.termAudioUrl = termUrl;
+      card.defAudioUrl = defUrl;
+
+      const playAudio = (url) => new Promise((res, rej) => {
+        const a = new Audio(url);
+        a.onended = res;
+        a.onerror = rej;
+        a.play();
+      });
+
+      onPhase('term', 'Marcus');
+      await playAudio(termUrl);
+      await sleep(1000);
+      onPhase('definition', 'Samantha');
+      await playAudio(defUrl);
+      onPhase(null, null);
+      return card; // return updated card with cached URLs
+    } catch (err) {
+      console.warn('Murf failed, falling back to Web Speech', err);
+    }
+  }
+
+  // Web Speech fallback (voice A = first male, voice B = first female if available)
+  onPhase('term', 'Voice A (Browser)');
+  await speakText(card.term, 'en-US', 0.9, 0.9);
+  await sleep(1000);
+  onPhase('definition', 'Voice B (Browser)');
+  await speakText(card.definition, 'en-US', 1.0, 1.1);
+  onPhase(null, null);
+  return card;
+}
+
+// ─────────────────────────────────────────────
+// ICONS (inline SVG)
+// ─────────────────────────────────────────────
+const WaveIcon = () => (
+  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h2V3zm4 18h-2V3h2v18zm4-4h-2V7h2v10zm4-6h-2v4h2V11z"/>
+  </svg>
+);
+
+const PlayIcon = () => (
+  <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" fill="currentColor"/></svg>
+);
+
+const StopIcon = () => (
+  <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" fill="currentColor" rx="2"/></svg>
+);
+
+const UploadIcon = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 16V4m0 0l-4 4m4-4l4 4"/>
+    <path d="M3 16v2a2 2 0 002 2h14a2 2 0 002-2v-2"/>
+  </svg>
+);
+
+const SearchIcon = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+  </svg>
+);
+
+const BackIcon = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" strokeWidth="2" strokeLinecap="round" fill="none" stroke="currentColor">
+    <path d="M19 12H5m0 0l7 7m-7-7l7-7"/>
+  </svg>
+);
+
+const DeleteIcon = () => (
+  <svg viewBox="0 0 24 24" width="15" height="15" strokeWidth="1.5" strokeLinecap="round" fill="none" stroke="currentColor">
+    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
+  </svg>
+);
+
+// ─────────────────────────────────────────────
+// WAVE BARS (decorative)
+// ─────────────────────────────────────────────
+const WaveBars = ({ count = 18 }) => {
+  const heights = [0.3,0.6,0.9,0.5,1,0.7,0.4,0.8,0.6,1,0.5,0.9,0.3,0.7,0.5,0.8,0.4,0.6];
+  return (
+    <div className="auth-wave-viz">
+      {Array.from({length: count}, (_, i) => (
+        <span key={i} style={{ '--h': heights[i % heights.length], animationDelay: `${i * 0.08}s`, height: `${heights[i % heights.length] * 48}px` }}/>
+      ))}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+// AUTH SCREEN
+// ─────────────────────────────────────────────
+function AuthScreen({ onLogin }) {
+  const [mode, setMode] = useState('login');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [pw, setPw] = useState('');
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    setErr(''); setLoading(true);
+    try {
+      const hash = await hashPassword(pw);
+      const users = getUsers();
+      if (mode === 'register') {
+        if (!name || !email || !pw) { setErr('All fields required.'); return; }
+        if (users.find(u => u.email === email)) { setErr('Email already registered.'); return; }
+        const user = { id: uid(), name, email, passwordHash: hash, decks: [] };
+        setUsers([...users, user]);
+        setSession(user.id);
+        onLogin(user);
+      } else {
+        const user = users.find(u => u.email === email);
+        if (!user || user.passwordHash !== hash) { setErr('Invalid email or password.'); return; }
+        setSession(user.id);
+        onLogin(user);
+      }
+    } catch (e) { setErr('Something went wrong.'); }
+    finally { setLoading(false); }
+  };
+
+  const handleKey = (e) => { if (e.key === 'Enter') submit(); };
+
+  return (
+    <div className="auth-screen">
+      <div className="auth-hero">
+        <div className="auth-logo">
+          <div className="auth-logo-icon"><WaveIcon /></div>
+          <span className="auth-logo-text">SonicStudy</span>
+        </div>
+        <h1 className="auth-tagline">
+          Study with<br/><em>your ears,</em><br/>not just your eyes.
+        </h1>
+        <p className="auth-sub">
+          Upload any PDF textbook. SonicStudy extracts key concepts and reads them back in dual voices — term in one voice, definition in another.
+        </p>
+        <WaveBars />
+      </div>
+      <div className="auth-panel">
+        <div className="auth-form-wrap">
+          <h2 className="auth-title">{mode === 'login' ? 'Welcome back' : 'Create account'}</h2>
+          <p className="auth-subtitle">{mode === 'login' ? 'Log in to your library' : 'Start building your audio library'}</p>
+          <div className="auth-tabs">
+            <button className={`auth-tab${mode === 'login' ? ' active' : ''}`} onClick={() => { setMode('login'); setErr(''); }}>Log In</button>
+            <button className={`auth-tab${mode === 'register' ? ' active' : ''}`} onClick={() => { setMode('register'); setErr(''); }}>Register</button>
+          </div>
+          {err && <div className="auth-error">{err}</div>}
+          {mode === 'register' && (
+            <div className="field">
+              <label>Full Name</label>
+              <input type="text" placeholder="Alex Johnson" value={name} onChange={e => setName(e.target.value)} onKeyDown={handleKey}/>
+            </div>
+          )}
+          <div className="field">
+            <label>Email</label>
+            <input type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={handleKey}/>
+          </div>
+          <div className="field">
+            <label>Password</label>
+            <input type="password" placeholder="••••••••" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={handleKey}/>
+          </div>
+          <button className="btn-primary" onClick={submit} disabled={loading}>
+            {loading ? 'Please wait...' : mode === 'login' ? 'Log In' : 'Create Account'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// SETTINGS MODAL
+// ─────────────────────────────────────────────
+function SettingsModal({ onClose }) {
+  const [murf, setMurf] = useState(getMurfKey());
+  const [claude, setClaude] = useState(getClaudeKey());
+  const [saved, setSaved] = useState(false);
+  const save = () => {
+    setMurfKey(murf.trim());
+    setClaudeKey(claude.trim());
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+  return (
+    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal">
+        <button className="modal-close" onClick={onClose}>×</button>
+        <h2>API Configuration</h2>
+        <p>Configure your API keys for voice generation and enhanced NLP extraction.</p>
+        <div className="settings-section">
+          <h3>Murf AI — Voice Generation</h3>
+          <div className="settings-input-wrap">
+            <input type="password" placeholder="murf_api_key_..." value={murf} onChange={e => setMurf(e.target.value)}/>
+          </div>
+          <p className="settings-note">Get your key at <a href="https://murf.ai" target="_blank">murf.ai</a>. Voice A: Marcus (en-US-marcus) · Voice B: Samantha (en-US-samantha)</p>
+        </div>
+        <div className="settings-section">
+          <h3>Claude API — Enhanced NLP (optional)</h3>
+          <div className="settings-input-wrap">
+            <input type="password" placeholder="sk-ant-..." value={claude} onChange={e => setClaude(e.target.value)}/>
+          </div>
+          <p className="settings-note">Without this key, heuristic extraction is used. For best results, add a Claude API key.</p>
+        </div>
+        <button className="btn-save" onClick={save}>{saved ? '✓ Saved' : 'Save Keys'}</button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// PROCESSING MODAL
+// ─────────────────────────────────────────────
+function ProcessingModal({ step }) {
+  return (
+    <div className="modal-overlay">
+      <div className="modal" style={{ textAlign: 'center' }}>
+        <h2>Processing PDF</h2>
+        <div className="processing-anim">
+          <span/><span/><span/>
+        </div>
+        <p className="processing-step">{step}</p>
+        <p style={{ color: 'var(--text3)', fontSize: '0.8rem', marginTop: '0.5rem' }}>This may take a moment...</p>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// LIBRARY SCREEN
+// ─────────────────────────────────────────────
+function LibraryScreen({ user, onDeckSelect, onDeckUpdate }) {
+  const [drag, setDrag] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [procStep, setProcStep] = useState('');
+  const fileRef = useRef();
+
+  const handleFile = async (file) => {
+    if (!file || file.type !== 'application/pdf') return;
+    setProcessing(true);
+    try {
+      setProcStep('Parsing PDF pages...');
+      const text = await extractTextFromPDF(file);
+      setProcStep('Extracting key terms & definitions...');
+      const pairs = await extractCards(text, getClaudeKey());
+      if (pairs.length === 0) throw new Error('No terms found');
+      const deck = {
+        id: uid(),
+        title: file.name.replace('.pdf', ''),
+        uploadedAt: new Date().toISOString(),
+        cards: pairs.map(p => ({ id: uid(), term: p.term, definition: p.definition, termAudioUrl: null, defAudioUrl: null }))
+      };
+      const users = getUsers();
+      const updated = users.map(u => u.id === user.id ? { ...u, decks: [...u.decks, deck] } : u);
+      setUsers(updated);
+      onDeckUpdate(updated.find(u => u.id === user.id));
+    } catch (err) {
+      console.error(err);
+      alert('Failed to process PDF. Make sure it contains text (not scanned images).');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const deleteDeck = (e, deckId) => {
+    e.stopPropagation();
+    if (!confirm('Delete this deck?')) return;
+    const users = getUsers();
+    const updated = users.map(u => u.id === user.id ? { ...u, decks: u.decks.filter(d => d.id !== deckId) } : u);
+    setUsers(updated);
+    onDeckUpdate(updated.find(u => u.id === user.id));
+  };
+
+  const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  return (
+    <div className="library">
+      <div className="library-header">
+        <h1>Your Textbook Library</h1>
+        <p>Upload PDFs to generate audio flashcard decks</p>
+      </div>
+
+      <div
+        className={`upload-zone${drag ? ' drag' : ''}`}
+        onDragEnter={e => { e.preventDefault(); setDrag(true); }}
+        onDragLeave={() => setDrag(false)}
+        onDragOver={e => e.preventDefault()}
+        onDrop={e => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]); }}
+        onClick={() => fileRef.current.click()}
+      >
+        <input ref={fileRef} type="file" accept=".pdf" onChange={e => handleFile(e.target.files[0])} onClick={e => e.stopPropagation()}/>
+        <div className="upload-icon"><UploadIcon /></div>
+        <h3>Drop a PDF here or click to browse</h3>
+        <p>Textbooks, lecture notes, study guides — any PDF with readable text</p>
+        <span className="badge">PDF only · NLP extraction · Dual-voice audio</span>
+      </div>
+
+      <div className="section-title">{user.decks.length} {user.decks.length === 1 ? 'Deck' : 'Decks'}</div>
+
+      {user.decks.length === 0 ? (
+        <div className="empty-state">
+          <h3>No decks yet</h3>
+          <p>Upload your first PDF to get started</p>
+        </div>
+      ) : (
+        <div className="decks-grid">
+          {user.decks.map(deck => (
+            <div className="deck-card" key={deck.id} onClick={() => onDeckSelect(deck)}>
+              <div className="deck-card-title">{deck.title}</div>
+              <div className="deck-card-meta">
+                <span>📚 {deck.cards.length} cards</span>
+                <span>🎙 Audio ready</span>
+              </div>
+              <div className="deck-card-footer">
+                <span className="deck-card-date">{fmtDate(deck.uploadedAt)}</span>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <span className="deck-pill">Open →</span>
+                  <button
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: '2px', transition: 'color 0.2s' }}
+                    onClick={e => deleteDeck(e, deck.id)}
+                    title="Delete deck"
+                  >
+                    <DeleteIcon />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {processing && <ProcessingModal step={procStep}/>}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// DECK SCREEN
+// ─────────────────────────────────────────────
+function DeckScreen({ user, deck, onBack, onDeckUpdate }) {
+  const [search, setSearch] = useState('');
+  const [playingId, setPlayingId] = useState(null);
+  const [phase, setPhase] = useState(null); // 'term' | 'definition' | null
+  const [phaseVoice, setPhaseVoice] = useState(null);
+  const [toast, setToast] = useState(null);
+  const playingRef = useRef(false);
+  const [currentDeck, setCurrentDeck] = useState(deck);
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const filtered = currentDeck.cards.filter(c =>
+    c.term.toLowerCase().includes(search.toLowerCase()) ||
+    c.definition.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const played = currentDeck.cards.filter(c => c.termAudioUrl).length;
+  const progress = Math.round((played / currentDeck.cards.length) * 100);
+
+  const handlePlay = async (card) => {
+    if (playingId === card.id) {
+      // Stop
+      speechSynthesis.cancel();
+      setPlayingId(null);
+      setPhase(null);
+      playingRef.current = false;
+      return;
+    }
+
+    const murfKey = getMurfKey();
+    if (!murfKey) {
+      showToast('Using browser TTS (add Murf key in Settings for premium voices)', 'success');
+    }
+
+    setPlayingId(card.id);
+    playingRef.current = true;
+
+    try {
+      const updatedCard = await playCard(
+        card,
+        murfKey,
+        'en-US-marcus',
+        'en-US-samantha',
+        (p, v) => { setPhase(p); setPhaseVoice(v); }
+      );
+      // Update cached audio URLs in deck
+      if (updatedCard.termAudioUrl !== card.termAudioUrl) {
+        const updatedDecks = user.decks.map(d =>
+          d.id === currentDeck.id
+            ? { ...d, cards: d.cards.map(c => c.id === card.id ? updatedCard : c) }
+            : d
+        );
+        const users = getUsers();
+        const updatedUsers = users.map(u => u.id === user.id ? { ...u, decks: updatedDecks } : u);
+        setUsers(updatedUsers);
+        const updatedDeck = updatedDecks.find(d => d.id === currentDeck.id);
+        setCurrentDeck(updatedDeck);
+        onDeckUpdate({ ...user, decks: updatedDecks });
+      }
+    } catch (err) {
+      showToast('Playback error. Check your Murf API key.', 'error');
+    } finally {
+      if (playingRef.current) {
+        setPlayingId(null);
+        setPhase(null);
+        playingRef.current = false;
+      }
+    }
+  };
+
+  const handlePlayAll = async () => {
+    for (const card of filtered) {
+      if (!playingRef.current && playingId !== card.id) break;
+      await handlePlay(card);
+    }
+  };
+
+  return (
+    <div className="deck-screen">
+      <div className="deck-screen-header">
+        <h1 className="deck-screen-title">{currentDeck.title}</h1>
+      </div>
+      <div className="deck-stats">
+        <div className="stat-pill"><strong>{currentDeck.cards.length}</strong> cards</div>
+        <div className="stat-pill"><strong>{played}</strong> played</div>
+        <div className="stat-pill">Voices: <strong>Marcus + Samantha</strong></div>
+      </div>
+
+      <div className="progress-bar-wrap">
+        <div className="progress-bar-label">
+          <span>Audio cache progress</span>
+          <span>{progress}%</span>
+        </div>
+        <div className="progress-bar">
+          <div className="progress-bar-fill" style={{ width: `${Math.max(progress, 2)}%` }}/>
+        </div>
+      </div>
+
+      <div className="search-wrap">
+        <SearchIcon />
+        <input className="search-input" type="text" placeholder="Search terms or definitions..." value={search} onChange={e => setSearch(e.target.value)}/>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="empty-state"><h3>No results for "{search}"</h3></div>
+      ) : (
+        <div className="card-list">
+          {filtered.map((card, i) => {
+            const isPlaying = playingId === card.id;
+            return (
+              <div key={card.id} className={`flash-card${isPlaying ? ' playing' : ''}`}>
+                <div className="flash-card-header">
+                  <span className="card-num">{String(i + 1).padStart(2, '0')}</span>
+                  <div className="card-content">
+                    <div className="card-term">{card.term}</div>
+                    <div className="card-def">{card.definition}</div>
+                  </div>
+                  <div className="card-actions">
+                    <button
+                      className={`play-btn${isPlaying ? ' active' : ''}`}
+                      onClick={() => handlePlay(card)}
+                      title={isPlaying ? 'Stop' : 'Play term + definition'}
+                    >
+                      {isPlaying ? <StopIcon /> : <PlayIcon />}
+                    </button>
+                  </div>
+                </div>
+                {isPlaying && phase && (
+                  <div className="play-status">
+                    <span className="play-status-label">▶ {phase === 'term' ? 'Term' : 'Definition'}</span>
+                    <span className="play-status-voice">{phaseVoice}</span>
+                    <div className="waveform-viz">
+                      <span/><span/><span/><span/><span/>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// TOP BAR
+// ─────────────────────────────────────────────
+function TopBar({ user, screen, selectedDeck, onBack, onLogout, onSettings }) {
+  return (
+    <div className="topbar">
+      {screen === 'deck' ? (
+        <button className="topbar-back" onClick={onBack}>
+          <BackIcon /> Library
+        </button>
+      ) : (
+        <div className="topbar-logo">
+          <div className="topbar-logo-icon"><WaveIcon /></div>
+          <span className="topbar-brand">SonicStudy</span>
+        </div>
+      )}
+      <div className="topbar-spacer"/>
+      <span className="topbar-user">Hi, {user.name.split(' ')[0]}</span>
+      <button className="topbar-btn settings" onClick={onSettings}>⚙ Settings</button>
+      <button className="topbar-btn" onClick={onLogout}>Log Out</button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// ROOT APP
+// ─────────────────────────────────────────────
+function App() {
+  const [user, setUser] = useState(null);
+  const [screen, setScreen] = useState('library');
+  const [selectedDeck, setSelectedDeck] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Restore session on mount
+  useEffect(() => {
+    const sid = getSession();
+    if (sid) {
+      const u = getUsers().find(u => u.id === sid);
+      if (u) setUser(u);
+    }
+  }, []);
+
+  const handleLogin = (u) => setUser(u);
+  const handleLogout = () => { setSession(null); setUser(null); setScreen('library'); setSelectedDeck(null); };
+
+  const handleDeckSelect = (deck) => {
+    setSelectedDeck(deck);
+    setScreen('deck');
+  };
+
+  const handleDeckUpdate = (updatedUser) => {
+    setUser(updatedUser);
+    if (selectedDeck) {
+      const refreshed = updatedUser.decks.find(d => d.id === selectedDeck.id);
+      if (refreshed) setSelectedDeck(refreshed);
+    }
+  };
+
+  if (!user) return <AuthScreen onLogin={handleLogin} />;
+
+  return (
+    <div className="app-shell">
+      <TopBar
+        user={user}
+        screen={screen}
+        selectedDeck={selectedDeck}
+        onBack={() => { setScreen('library'); setSelectedDeck(null); }}
+        onLogout={handleLogout}
+        onSettings={() => setShowSettings(true)}
+      />
+      {screen === 'library' && (
+        <LibraryScreen
+          user={user}
+          onDeckSelect={handleDeckSelect}
+          onDeckUpdate={handleDeckUpdate}
+        />
+      )}
+      {screen === 'deck' && selectedDeck && (
+        <DeckScreen
+          user={user}
+          deck={selectedDeck}
+          onBack={() => { setScreen('library'); setSelectedDeck(null); }}
+          onDeckUpdate={handleDeckUpdate}
+        />
+      )}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
